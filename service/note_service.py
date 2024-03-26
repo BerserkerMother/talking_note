@@ -31,28 +31,20 @@ class NoteService:
 
     def search_notes(self, nsr: NoteSearchRequest) -> List[int]:
         user_id = nsr.user_id
-        text = nsr.text
-        result = self.db.search_vectors(user_id=user_id, query_vectors=[text])
+        vector = get_embedding(nsr.text)
+        result = self.db.search_vectors(user_id=user_id, query_vectors=[vector])
         return [id for id, _ in result[0]]
 
 
 if __name__ == "__main__":
     db = VectorDatabase()
     ns = NoteService(db=db)
-    try:
-        ns.db.collection.release()
-    except:
-        None
     note = Note(
         title="My first test note",
         text="In this we test if we can succesfuly insert note to db",
-        userID=0,
+        userID=3,
     )
-    ns.insert_note(note)
-    ns.db.collection.create_index(
-        field_name="vector",
-        index_params={"index_type": "FLAT", "metric_type": "L2", "params": {}},
-    )
-    ns.db.collection.load()
-    print(ns.db.collection.query("user_id == 0", output_fields=["user_id", "vector"]))
+    # ns.insert_note(note)
+    print(ns.db.collection.query("user_id == 1", output_fields=["user_id", "vector"]))
+    print(ns.search_notes(nsr=NoteSearchRequest(userID=1, text="whatever podcast")))
     ns.db.collection.release()

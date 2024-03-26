@@ -12,20 +12,25 @@ class VectorDatabase:
         self.collection = self._get_or_create_collection()
 
     def _get_or_create_collection(self):
-        if True:
-            fields = [
-                FieldSchema(
-                    name="id", dtype=DataType.INT64, is_primary=True, auto_id=True
-                ),
-                FieldSchema(name="user_id", dtype=DataType.INT64),  # User ID field
-                FieldSchema(
-                    name="vector", dtype=DataType.FLOAT_VECTOR, dim=1536
-                ),  # Adjust 'dim' according to your vector size
-            ]
-            schema = CollectionSchema(fields, description="User Notes Collection")
-            collection = Collection(name=self.collection_name, schema=schema)
-        else:
-            collection = Collection(name=self.collection_name)
+        fields = [
+            FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),
+            FieldSchema(name="user_id", dtype=DataType.INT64),  # User ID field
+            FieldSchema(
+                name="vector", dtype=DataType.FLOAT_VECTOR, dim=1536
+            ),  # Adjust 'dim' according to your vector size
+        ]
+        schema = CollectionSchema(fields, description="User Notes Collection")
+        collection = Collection(name=self.collection_name, schema=schema)
+        try:
+            collection.release()
+        except:
+            print("error happened when trying to release collection")
+        collection.create_index(
+            field_name="vector",
+            index_params={"index_type": "FLAT", "metric_type": "L2", "params": {}},
+        )
+
+        collection.load()
         return collection
 
     def insert_vectors(self, user_ids, vectors):
@@ -57,6 +62,8 @@ class VectorDatabase:
         )
         return [[(hit.id, hit.distance) for hit in result] for result in results]
 
+    def get_user_ids(self, ids: List[int]) -> List[int]:
+        NotImplemented
 
 # Example usage
 if __name__ == "__main__":
