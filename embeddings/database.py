@@ -1,5 +1,12 @@
 # embeddings/database.py
-from pymilvus import Collection, CollectionSchema, FieldSchema, DataType, connections, utility
+from pymilvus import (
+    Collection,
+    CollectionSchema,
+    FieldSchema,
+    DataType,
+    connections,
+    utility,
+)
 from typing import List
 
 from .vectorizer import get_batch_embedding
@@ -20,7 +27,9 @@ class VectorDatabase:
     def _get_or_create_collection(self):
         if not self._has_collection(self.collection_name):
             fields = [
-                FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),
+                FieldSchema(
+                    name="id", dtype=DataType.INT64, is_primary=True, auto_id=True
+                ),
                 FieldSchema(name="user_id", dtype=DataType.INT64),  # User ID field
                 FieldSchema(
                     name="vector", dtype=DataType.FLOAT_VECTOR, dim=1536
@@ -29,9 +38,9 @@ class VectorDatabase:
             schema = CollectionSchema(fields, description="User Notes Collection")
             collection = Collection(name=self.collection_name, schema=schema)
             collection.create_index(
-            field_name="vector",
-            index_params={"index_type": "FLAT", "metric_type": "L2", "params": {}},
-        )
+                field_name="vector",
+                index_params={"index_type": "FLAT", "metric_type": "L2", "params": {}},
+            )
         else:
             collection = Collection(name=self.collection_name)
         try:
@@ -69,10 +78,14 @@ class VectorDatabase:
             output_fields=["id", "user_id"],
         )
         print(results)
-        return [[(hit.id, hit.distance, hit.entity.user_id) for hit in result] for result in results]
+        return [
+            [(hit.id, hit.distance, hit.entity.user_id) for hit in result]
+            for result in results
+        ]
 
     def get_user_ids(self, ids: List[int]) -> List[int]:
         NotImplemented
+
 
 # Example usage
 if __name__ == "__main__":
