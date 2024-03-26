@@ -33,7 +33,7 @@ class NoteService:
         user_id = nsr.user_id
         vector = get_embedding(nsr.text)
         result = self.db.search_vectors(user_id=user_id, query_vectors=[vector])
-        return [id for id, _ in result[0]]
+        return [user_id for _, _, user_id in result[0]]
 
 
 if __name__ == "__main__":
@@ -45,6 +45,7 @@ if __name__ == "__main__":
         userID=3,
     )
     # ns.insert_note(note)
-    print(ns.db.collection.query("user_id == 1", output_fields=["user_id", "vector"]))
+    # print(ns.db.collection.query("user_id == 1", output_fields=["user_id", "vector"]))
+    print(ns.search_notes(nsr=NoteSearchRequest(userID=1, text="whatever podcast")))
     print(ns.search_notes(nsr=NoteSearchRequest(userID=1, text="whatever podcast")))
     ns.db.collection.release()

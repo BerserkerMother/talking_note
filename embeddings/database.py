@@ -1,5 +1,5 @@
 # embeddings/database.py
-from pymilvus import Collection, CollectionSchema, FieldSchema, DataType, connections
+from pymilvus import Collection, CollectionSchema, FieldSchema, DataType, connections, utility
 from typing import List
 
 from .vectorizer import get_batch_embedding
@@ -11,26 +11,33 @@ class VectorDatabase:
         connections.connect()
         self.collection = self._get_or_create_collection()
 
+    def _has_collection(self, collection_name: str) -> bool:
+        try:
+            return utility.has_collection(collection_name=collection_name)
+        except:
+            print("error")
+
     def _get_or_create_collection(self):
-        fields = [
-            FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),
-            FieldSchema(name="user_id", dtype=DataType.INT64),  # User ID field
-            FieldSchema(
-                name="vector", dtype=DataType.FLOAT_VECTOR, dim=1536
-            ),  # Adjust 'dim' according to your vector size
-        ]
-        schema = CollectionSchema(fields, description="User Notes Collection")
-        collection = Collection(name=self.collection_name, schema=schema)
+        if not self._has_collection(self.collection_name):
+            fields = [
+                FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),
+                FieldSchema(name="user_id", dtype=DataType.INT64),  # User ID field
+                FieldSchema(
+                    name="vector", dtype=DataType.FLOAT_VECTOR, dim=1536
+                ),  # Adjust 'dim' according to your vector size
+            ]
+            schema = CollectionSchema(fields, description="User Notes Collection")
+            collection = Collection(name=self.collection_name, schema=schema)
+            collection.create_index(
+            field_name="vector",
+            index_params={"index_type": "FLAT", "metric_type": "L2", "params": {}},
+        )
+        else:
+            collection = Collection(name=self.collection_name)
         try:
             collection.release()
         except:
             print("error happened when trying to release collection")
-        collection.create_index(
-            field_name="vector",
-            index_params={"index_type": "FLAT", "metric_type": "L2", "params": {}},
-        )
-
-        collection.load()
         return collection
 
     def insert_vectors(self, user_ids, vectors):
@@ -49,6 +56,7 @@ class VectorDatabase:
 
     def search_vectors(self, user_id, query_vectors, top_k=5):
         """Search for similar vectors belonging to a specific user."""
+        self.collection.load()
         search_params = {"metric_type": "L2", "params": {"nprobe": 10}}
         # Filtering by user_id
         expr = f"user_id == {user_id}"
@@ -60,7 +68,8 @@ class VectorDatabase:
             expr=expr,
             output_fields=["id", "user_id"],
         )
-        return [[(hit.id, hit.distance) for hit in result] for result in results]
+        print(results)
+        return [[(hit.id, hit.distance, hit.entity.user_id) for hit in result] for result in results]
 
     def get_user_ids(self, ids: List[int]) -> List[int]:
         NotImplemented
